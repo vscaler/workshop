@@ -224,17 +224,17 @@
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
       tags: rsyslog
 
-    - role: trinity/zabbix
-      zabbix_path: '{{ trix_local }}/usr/lib/zabbix/'
-      zabbix_sql_db: 'zabbix'
-      tags: zabbix
+#    - role: trinity/zabbix
+#      zabbix_path: '{{ trix_local }}/usr/lib/zabbix/'
+#      zabbix_sql_db: 'zabbix'
+#      tags: zabbix
 
 #    - role: trinity/zabbix_agent
 #      tags: zabbix_agent
 
-    - role: trinity/zabbix_checks
-      zabbix_hostmetadata: controller
-      tags: zabbix_checks
+#    - role: trinity/zabbix_checks
+#      zabbix_hostmetadata: controller
+#      tags: zabbix_checks
 
     - role: trinity/trix-status
       tags: trix-status
