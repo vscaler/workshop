@@ -61,26 +61,34 @@ docker cp kolla-deploy:/kolla/kolla-ansible/ansible/inventory/all-in-one ~/kolla
 
 ## Create the globals.yml configuration file
 
+The file ```~/kolla/globals.yml' holds the values for our clouds base configuration. Let update that with some parameters to guide the installation process.  
+
+> Note: We use an IP address in here from the ```aio``` node. SSH to that system and capture the ```eth0``` ip address using the command ```ip addrr```
+
+```bash
 [root@test-openstack kolla]# egrep -v '(^#|^$)' globals.yml
 ---
 openstack_release: "stein"
+---
 kolla_internal_vip_address: "192.168.17.59" # <---  this needs to be the aio ip addr
+---
 docker_registry: "registry.vscaler.com:5000"
+---
 network_interface: "eth0"
 neutron_external_interface: "eth1"
 neutron_type_drivers: "local,flat,vlan,vxlan"
 neutron_tenant_network_types: "local"
+---
 enable_haproxy: "no"
 # rest of file is ok leave alone
+```
 
+## Setup the ansible inventory file. 
 
-# on second host - disable selinux / setup /etc/hosts file / setup passwordless access between the two hosts. 
-# disable selinux
-# give system a hostname in /etc/hosts
-# setup passwordless access
+We need to update the hostname and change the ansible_connection to ssh (from local) 
 
-
-# edit inventory
+Edit the inventory file ```~/kolla/all-in-one```
+```ansible
 [control]
 openstack-aio       ansible_connection=ssh
 
@@ -98,6 +106,7 @@ openstack-aio       ansible_connection=ssh
 
 [deployment]
 openstack-aio       ansible_connection=ssh
+```
 
 # mount the kolla config dirs 
 
