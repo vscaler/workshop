@@ -1,10 +1,10 @@
 [controllers]
-headnode
+vcontroller
 [staticcomputes]
-computenode0001
+node0001
 [ood]
 #portal
 [vncnodes]
-computenode0001
+node0001
 [logins]
 
