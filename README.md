@@ -78,6 +78,15 @@ yum -y install docker vim screen
 systemctl start docker
 ````
 
+## Bring up the cloud interface on the aio node
+
+eth1 will be used as the cloud network and needs to be brought to an UP state before we configure the cloud. 
+
+```bash
+# aio node
+ip link set dev eth1 up 
+```
+
 ## Working with Screen
 
 Wifi drops are painfully frequent - dont let it ruin your good work. Get working in screen (or tmux) so you can reattach in the event of any connectivity issues. 
