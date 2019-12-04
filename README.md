@@ -6,10 +6,13 @@ In this workshop we will shall attempt the following
 2. Create a 2 node virtual cluster on top of our OpenStack environment 
 3. Run some workload in a Singularity Container 
 
-Ok, so to start with lets make sure we can all access the VMs provided for the lab environment and get the baseline configuration in place to allow us progress. Details for access will be provided by the instrutor. You should have access to 2 VMs. One vscaler-kolla-deploy-XX and one vscaler-openstack-aio-YY.
+Ok, so to start with lets make sure we can all access the VMs provided for the lab environment and get the baseline configuration in place to allow us progress. Details for access will be provided by the instrutor. You should have access to 2 VMs. One VM ```vscaler-kolla-deploy-XX``` and ```vscaler-openstack-aio-YY```. These nodes are refered to as ```deploy``` and ```aio``` from here on in. (aio =  AllInOne)
 
-## Lets disable selinux on both nodes
+> Note: All commands should be run by root unless otherwise stated. You'll need to login as centos and then ```sudo su -```
+
+## Disable selinux on both nodes
 ```bash
+# Run this on both deploy and aio nodes
 setenforce 0
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux 
 ```
@@ -17,13 +20,15 @@ sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
 
 ## Install docker and some packages
 ```bash
+# Install on deploy node only
 yum -y install docker vim screen
 systemctl start docker
 ````
 
 ## Working with Screen
 
-wifi drops are painfully frequent - dont let it ruin your good work. Get working in screen (or tmux) so you can reattach in the event of any connectivity issues. 
+Wifi drops are painfully frequent - dont let it ruin your good work. Get working in screen (or tmux) so you can reattach in the event of any connectivity issues. 
+
 ```bash
 # Screen basics
 screen -S vscaler
@@ -31,18 +36,30 @@ screen -S vscaler
 screen -r vscaler
 ```
 
-
+# Setup the deploy container
+Lets pull our deployment container and get it tagged and ready for action.
+```bash
+# on deploy node
 docker pull registry.vscaler.com:5000/kolla/kolla-deploy:stein
 docker tag registry.vscaler.com:5000/kolla/kolla-deploy:stein kolla-deploy
-
 docker create --name kolla-deploy --hostname kolla-deploy kolla-deploy 
+```
 
-mkdir /root/kolla
+## Create the base configuration files. 
 
+Our deployment system is guided by a number of configuiration. We copy the default files across from the deploy container and populate them with some sensible defaults.
+
+> Note: Keep the naming conventions here. We mount these directories back into the container a little later on so if your directory has unique naming some steps will fail! You have been warned! 
+
+```bash
+# on deploy node
+mkdir ~/kolla
 docker cp kolla-deploy:/kolla/kolla-ansible/etc/kolla/passwords.yml ~/kolla
 docker cp kolla-deploy:/kolla/kolla-ansible/etc/kolla/globals.yml ~/kolla
 docker cp kolla-deploy:/kolla/kolla-ansible/ansible/inventory/all-in-one ~/kolla
+```
 
+## Create the globals.yml configuration file
 
 [root@test-openstack kolla]# egrep -v '(^#|^$)' globals.yml
 ---
