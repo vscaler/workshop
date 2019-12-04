@@ -1,0 +1,161 @@
+---
+- hosts: '{{ hostlist }}'
+
+  roles:
+  - role: trinity/init-nodes
+    tags: init-nodes
+
+  - role: trinity/hostname
+    tags: hostname
+  
+  - role: trinity/resolvconf
+    tags: resolvconf
+
+  - role: trinity/repos
+    repos:
+    - repo: '{{ trix_local_repo_baseurl }}'
+      name: trinityx-local
+    tags: local_repo
+    when: local_install
+
+  - role: trinity/repos
+    repos:
+    - repo: '{{ userspace_repo }}'
+    - repo: epel-release
+    - repo: '{{luna_repo}}'
+    - '{{ohpc_repo_dict}}'
+    - '{{ohpc_updates_repo_dict}}'
+    tags: repos
+    when: not local_install|bool and not enable_repomirror|bool
+
+  - role: trinity/repos
+    repos:
+    - '{{centos_repo_dict}}'
+    - repo: '{{trinity_repo}}'
+    - repo: '{{luna_repo}}'
+    - repo: '{{zabbix_repo}}'
+    - '{{epel_repo_dict}}'
+    - '{{ohpc_repo_dict}}'
+    - '{{ohpc_updates_repo_dict}}'
+    when: enable_repomirror|bool
+    tags: repos
+
+  - role: trinity/repos
+    repos:
+    - '{{mellanox_repo_dict}}'
+    tags: 
+      - mlnx-ofed
+      - repos
+    when: use_mellanox_ofed|bool
+
+  - role: trinity/repos
+    repos:
+    - { repo: 'http://mirror.nsc.liu.se/centos-store/{{centos_fullvers}}/os/x86_64/', remote_key: 'http://mirror.nsc.liu.se/centos-store/RPM-GPG-KEY-CentOS-7', name: 'CentOS-{{centos_fullvers}}-Base' }
+    - { repo: 'http://mirror.nsc.liu.se/centos-store/{{centos_fullvers}}/updates/x86_64/', remote_key: 'http://mirror.nsc.liu.se/centos-store/RPM-GPG-KEY-CentOS-7', name: 'CentOS-{{centos_fullvers}}-Updates' }
+    - { repo: 'http://mirror.nsc.liu.se/centos-store/{{centos_fullvers}}/extras/x86_64/', remote_key: 'http://mirror.nsc.liu.se/centos-store/RPM-GPG-KEY-CentOS-7', name: 'CentOS-{{centos_fullvers}}-Extras' }
+    - { repo: 'http://mirror.nsc.liu.se/centos-store/{{centos_fullvers}}/centosplus/x86_64/', remote_key: 'http://mirror.nsc.liu.se/centos-store/RPM-GPG-KEY-CentOS-7', name: 'CentOS-{{centos_fullvers}}-centosplusplus' }
+    - { repo: 'http://mirror.nsc.liu.se/centos-store/{{centos_fullvers}}/fasttrack/x86_64/', remote_key: 'http://mirror.nsc.liu.se/centos-store/RPM-GPG-KEY-CentOS-7', name: 'CentOS-{{centos_fullvers}}-fasttrack' }
+    tags: 
+      - repos
+    when: 
+      - use_centos_vault|bool
+      - not enable_repomirror|bool
+      - not local_install|bool
+
+  - role: trinity/packages
+    tags: packages
+
+  - role: trinity/tunables
+    tags: tunables
+
+  - role: trinity/ssl-cert
+    tags: ssl-cert
+
+  - role: trinity/chrony
+    chrony_upstream_servers:
+    - '{{ trix_ctrl_ip }}'
+    tags: chrony
+
+  - role: trinity/rdma-centos
+    tags: rdma-centos
+    when: not use_mellanox_ofed|bool
+
+  - role: trinity/mlnx_ofed
+    tags: mlnx-ofed
+    when: use_mellanox_ofed|bool
+
+  - role: trinity/trix-tree
+    tags: trix-tree
+
+  - role: trinity/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '{{ trix_shared }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
+      options: 'defaults,nfsvers=4,ro,retrans=4'
+    - path: '{{ trix_home }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
+      options: 'defaults,nfsvers=4,rw,retrans=4,noatime'
+    tags: nfs-mounts
+
+  - role: trinity/environment-modules
+    when: enable_openhpc == false
+    tags: environment-modules
+
+  - role: trinity/sssd
+    sss_allowed_groups:
+    - 'admins'
+    sss_ldap_hosts:
+    - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+    sss_filter_enabled: '{{ not enable_slurm_pam }}'
+    tags: sssd
+
+  - role: trinity/ssh
+    tags: ssh
+
+  - role: trinity/openhpc
+    when: enable_openhpc == true
+    tags: openhpc
+
+  - role: trinity/slurm
+    slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+    slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+    munge_conf_path: '{{ trix_shared }}/etc/munge'
+    tags: slurm
+
+  - role: trinity/rsyslog
+    syslog_forwarding_rules:
+    - name: default
+      proto: 'tcp'
+      port: 514
+      host: '{{ trix_ctrl_ip }}'
+      facility: '*'
+      level: '*'
+    tags: rsyslog
+
+#  - role: trinity/zabbix_agent
+#    tags: zabbix_agent
+
+  - role: trinity/zabbix_checks
+    zabbix_hostmetadata: "{{ image_name }}"
+    tags: zabbix_checks
+
+  - role: trinity/docker
+    when: enable_docker
+    tags: docker
+
+  - role: trinity/nscd
+    tags: nscd
+
+  - role: trinity/graphical_desktop
+    when: '"vncnodes" in group_names'
+    tags: graphical_desktop
+
+  - role: trinity/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '/opt/ohpc'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+      options: 'defaults,nfsvers=4,ro,retrans=4,noatime'
+    when: enable_openhpc == true
+    tags: nfs-mounts

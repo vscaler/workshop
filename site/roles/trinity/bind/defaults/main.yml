@@ -1,0 +1,19 @@
+---
+# vars file for bind
+
+bind_packages:
+  - bind
+bind_dns_forwarders:
+  - '8.8.8.8'
+  - '8.8.4.4'
+bind_dnssec_enable: 'no'
+bind_db_path: '/var/named'
+
+extra_fwd_lookups: []
+
+resolv_server: '127.0.0.1'
+resolv_search_domains: 'cluster ipmi'
+
+
+# if this is enabled then ansible will build the internal zones files by looping through all the hosts in the inventory and filtering zones by CIDR using ansible_all_ipv4_addresses array 
+build_zones_from_inventory: false

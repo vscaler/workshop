@@ -1,0 +1,47 @@
+---
+
+- name: Clear yum cache
+  shell: yum clean all
+  args:
+    warn: false
+  changed_when: False
+
+- name: Get latest available kernel if no specific kernel version is requested
+  shell: yum --show-duplicates list kernel | awk '$1=="kernel.x86_64"{print $2}' | sort -V | tail -1
+  register: yum_kernel_ver
+  args:
+    warn: false
+  changed_when: False
+  when: requested_kernel_ver == ''
+
+- name: Check if we running latest kernel if no specific kernel version is requested and fail if update_kernel_and_reboot is false
+  fail:
+    msg: "You are not running the latest kernel. Please update and reboot."
+  when: 
+    - requested_kernel_ver == ''
+    - yum_kernel_ver.stdout + "." + ansible_architecture !=  ansible_kernel and  ! update_kernel_and_reboot|bool
+
+- name: Install latest kernel if no specific kernel version is requested
+  yum:
+    name: kernel
+    state: latest 
+  when: requested_kernel_ver == ''
+
+- name: Check if we running kernel version {{requested_kernel_ver}} (if specified) and fail if update_kernel_and_reboot is false
+  fail:
+    msg: "You are not running kernel version {{requested_kernel_ver}}. Please update and reboot."
+  when:
+    - requested_kernel_ver != ''
+    - '{{requested_kernel_ver}}' + "." + ansible_architecture !=  ansible_kernel and  ! update_kernel_and_reboot|bool
+
+- name: install kernel version {{requested_kernel_ver}} (if specified)
+  yum:
+    name: 'kernel-{{requested_kernel_ver}}'
+    state: present
+  when: 
+    - requested_kernel_ver != ''
+    - update_kernel_and_reboot|bool
+
+- name: reboot node to allow kernel update to take effect
+  reboot:
+  when: update_kernel_and_reboot|bool

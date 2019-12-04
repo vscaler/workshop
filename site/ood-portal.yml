@@ -1,0 +1,38 @@
+---
+- import_playbook: trinity-image-setup.yml
+  vars:
+    hostlist: ood
+
+- hosts: ood
+  roles:
+    - role: trinity/repos
+      repos:
+      - repo: '{{ood_repo}}'
+      - repo: 'centos-release-scl'
+      when: not enable_repomirror|bool
+      tags: repos
+
+    - role: trinity/repos
+      repos:
+      - '{{ood_repo_dict}}'
+      - '{{sclo_repo_dict}}'
+      - '{{sclo_rh_repo_dict}}'
+      when:  enable_repomirror|bool
+      tags: repos
+
+    - role: trinity/ood-portal
+      slurm_controller: '{{ trix_ctrl_hostname }}'
+      ldap_hosts: 
+        - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      login_host: '{{ trix_ctrl_hostname }}'
+      tags: ood
+
+- hosts: vncnodes
+  roles:
+  - role: trinity/graphical_desktop
+    tags: graphical_desktop
+
+- hosts: controllers
+  roles:
+    - role: trinity/ood-modules
+      tags: ood-modules

@@ -1,0 +1,25 @@
+---
+# Install additional packages and tunables
+
+- name: Install prereq packages
+  yum:
+    name: '{{ packages_packages }}'
+    state: present
+  tags: install-only
+
+- name: Install additional packages
+  yum:
+    name: '{{ tunables_packages }}'
+    state: present
+  tags: install-only
+  
+- name: Enable haveged service
+  service:
+    name: haveged
+    enabled: yes
+
+- name: Start haveged service
+  service:
+    name: haveged
+    state: started
+  when: ansible_connection not in 'lchroot'

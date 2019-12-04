@@ -1,0 +1,5 @@
+---
+- import_playbook: trinity-image-setup.yml
+  vars:
+    hostlist: staticcomputes
+

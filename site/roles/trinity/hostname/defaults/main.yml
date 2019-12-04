@@ -1,0 +1,5 @@
+---
+# vars file for hostname
+
+use_inventory_hostname: False
+

@@ -1,0 +1,5 @@
+---
+# vars file for graphical_desktop
+
+enable_vnc_to_nodes: false 
+vnc_desktop: 

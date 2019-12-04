@@ -1,0 +1,150 @@
+---
+# tasks file for bind
+
+- name: Install bind packages
+  yum:
+    name: '{{ bind_packages }}'
+    state: present
+  tags: install-only
+
+- name: Ensure {{ bind_db_path }} exists
+  file:
+    path: '{{ bind_db_path }}'
+    owner: named
+    group: named
+    state: directory
+
+- name: Ensure {{ bind_db_path }} has proper selinux permissions
+  file:
+    path: '{{ bind_db_path }}'
+    state: directory
+    setype: named_zone_t
+    seuser: system_u
+
+- name: Update named data path
+  replace:
+    path: /etc/named.conf
+    regexp: '/var/named'
+    replace: '{{ bind_db_path }}'
+    backup: yes
+  notify: restart named
+
+- name: Configure named to listen on all ports
+  replace:
+    path: /etc/named.conf
+    regexp: '{{ item }}'
+    replace: ' any; '
+  with_items:
+    - ' localhost; '
+    - ' 127\.0\.0\.1; '
+    - ' ::1; '
+  notify: restart named
+ 
+- name: Toggle DNSSEC
+  lineinfile:
+    path: /etc/named.conf
+    line: 'dnssec-enable {{ "yes" if bind_dnssec_enable else "no"}};'
+    regexp: 'dnssec-enable'
+  notify: restart named
+
+- name: Toggle DNSSEC validation
+  lineinfile:
+    path: /etc/named.conf
+    line: 'dnssec-validation {{ "yes" if bind_dnssec_enable else "no"}};'
+    regexp: 'dnssec-validation'
+  notify: restart named
+
+- name: Configure named forwarders
+  blockinfile:
+    path: /etc/named.conf
+    insertafter: 'recursion yes;'
+    marker: '// {mark} forwarders'
+    block: |
+      {% if ansible_dns['nameservers'] is defined or bind_dns_forwarders %}
+          forwarders {
+            {% if bind_dns_forwarders %}
+              {% for f in bind_dns_forwarders %}{{ f }}; {% endfor %}
+            {% else %}
+              {% for f in ansible_dns['nameservers'] %}{% if f not in ansible_all_ipv4_addresses%}{{ f }};{% endif %} {% endfor %}
+            {% endif %}
+          };
+      {% endif %}
+  notify: restart named
+
+- name: Render /etc/resolv.conf
+  template:
+    src: "resolv.conf"
+    dest: "/etc/resolv.conf"
+    backup: yes
+
+- name: Preserve resolv.conf from being overwritten
+  copy:
+    src: dhclient-enter-hooks
+    dest: /etc/dhcp/dhclient-enter-hooks
+    mode: 0755
+    backup: yes
+
+- name: Enable named service
+  service:
+    name: named
+    enabled: yes
+  when: not ha|default(False)
+
+- block:
+
+  - name: Copy default zones to {{ bind_db_path }}
+    shell: rsync -raW -AX /var/named/* {{ bind_db_path }}
+    args:
+      creates: '{{ bind_db_path }}/named.empty'
+
+  - name: Build internal zone(s) from Inventory (default disabled, incompatible with luna)
+    template:
+      src: dns_forward_zone
+      dest: '{{ trix_local }}/var/lib/named/{{ item.0 }}.zone'
+      mode: 0644
+      owner: named
+      group: named
+      setype: named_zone_t
+      seuser: system_u
+    with_together:
+      - ['{{ trix_domain }}']
+      - ['{{ trix_cluster_net}}/{{trix_cluster_netprefix}}']
+    notify: restart named
+    when: build_zones_from_inventory|bool
+
+  - name: Render named.<zone>.zones
+    template:
+      src: 'named.zone.zones'
+      dest: '{{ trix_local }}/etc/named.{{item}}.zones'
+      setype: named_conf_t
+      seuser: system_u
+    with_items:
+      - '{{ trix_domain }}'
+
+    notify: restart named
+
+  - name: Include internal zone file(s) in named conf
+    lineinfile:
+      path: '/etc/named.conf'
+      line: 'include "{{ trix_local }}/etc/named.{{ item }}.zones";'
+    with_items:
+      - '{{ trix_domain }}'
+    notify: restart named
+    when: build_zones_from_inventory|bool
+
+  - name: Start named service
+    service:
+      name: named
+      state: started
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'named'
+      resource_class: 'systemd'
+      resource_type: 'systemd:named'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    tags: pcs
+    when: ha | default(False)
+
+  when: primary | default(True)

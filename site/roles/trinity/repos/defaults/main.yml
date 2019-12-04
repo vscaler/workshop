@@ -1,0 +1,8 @@
+---
+repos:
+  repo: ''
+
+centos_vers: 7.6
+local_install: false
+use_centos_vault: false
+trix_local_repo_baseurl: http://localhost/repos/trinityx/

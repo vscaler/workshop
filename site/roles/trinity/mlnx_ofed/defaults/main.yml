@@ -1,0 +1,19 @@
+---
+# vars file for mlnx_ofed
+
+use_mellanox_ofed: false
+mellanox_package: 'mlnx-ofed-hpc'
+
+# currently supported options for mellanox_package are:
+# mlnx-ofed-all:        Installs all available packages in MLNX_OFED.
+# mlnx-ofed-basic:      Installs basic packages required for running Mellanox cards.
+# mlnx-ofed-guest:      Installs packages required by guest OS.
+# mlnx-ofed-hpc:        Installs packages required for HPC.
+# mlnx-ofed-hypervisor: Installs packages required by hypervisor OS.
+# mlnx-ofed-vma:        Installs packages required by VMA.
+# mlnx-ofed-vma-eth:    Installs packages required by VMA to work over Ethernet.
+# mlnx-ofed-vma-vpi:    Installs packages required by VMA to support VPI.
+
+mellanox_version: 'latest'
+mellanox_os_ver: 'rhel7.7'
+mellanox_repo: http://linux.mellanox.com/public/repo/mlnx_ofed/{{mellanox_version}}/{{mellanox_os_ver}}/mellanox_mlnx_ofed.repo

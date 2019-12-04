@@ -1,0 +1,84 @@
+---
+# tasks file for ood-modules
+- name: check if /opt/ohpc/pub/apps/TurboVNC/2.2.2/bin/vncserver exists
+  stat:
+    path: /opt/ohpc/pub/apps/TurboVNC/2.2.2/bin/vncserver
+  register: vncserver 
+
+- name: configure TuboVNC 2.2.2 module
+  block:
+  - name: Copy turboVNC rpm to /tmp 
+    copy:
+      src: turbovnc-2.2.2.x86_64.rpm
+      dest: /tmp/turbovnc-2.2.2.x86_64.rpm
+
+  - name: Install TurboVNC rpm to /opt/TurboVNC
+    yum:
+      name: /tmp/turbovnc-2.2.2.x86_64.rpm
+      state: present
+
+  - name: Ensure /opt/ohpc/pub/{apps|modulefiles}/TurboVNC exists
+    file:
+      path: '/opt/ohpc/pub/{{item}}/TurboVNC'
+      owner: root
+      group: root
+      mode: 0755
+      state: directory
+    with_items:
+      - apps
+      - modulefiles
+
+  - name: copy /opt/TurboVNC/ to /opt/ohpc/pub/apps/TurboVNC
+    command: cp -r /opt/TurboVNC/ /opt/ohpc/pub/apps/TurboVNC/2.2.2
+  
+  - name: uninstall TurboVNC from /opt/TurboVNC
+    yum:
+      name: turbovnc-2.2.2
+      state: absent
+
+  - name: Copy turboVNC module to {{ trix_root }}/ohpc/pub/modulefiles/TurboVNC/2.2.2
+    copy:
+      src: turbovnc-2.2.2.module
+      dest: '{{ trix_root }}/ohpc/pub/modulefiles/TurboVNC/2.2.2'
+  when: vncserver.stat.exists == False
+
+- name: check if /opt/ohpc/pub/apps/websockify/0.8.0/bin/websockify exists
+  stat:
+    path: /opt/ohpc/pub/apps/websockify/0.8.0/bin/websockify
+  register: websockify 
+
+- name: configure websockify 0.8.0 module
+  block:
+  - name: clone websockify git repo to /tmp
+    git:
+      repo: https://github.com/novnc/websockify.git
+      dest: /tmp/websockify
+
+  - name: Ensure /opt/ohpc/pub/{apps|modulefiles}/websockify exists
+    file:
+      path: '{{item}}'
+      owner: root
+      group: root
+      mode: 0755
+      state: directory
+    with_items:
+      - /opt/ohpc/pub/apps/websockify
+      - /opt/ohpc/pub/apps/websockify/0.8.0
+      - /opt/ohpc/pub/modulefiles/websockify
+      - /opt/ohpc/pub/apps/websockify/0.8.0/lib
+      - /opt/ohpc/pub/apps/websockify/0.8.0/lib/python/
+
+  - name: build and install websockify into /opt/ohpc/apps/websockify
+    shell: PYTHONPATH=/opt/ohpc/pub/apps/websockify/0.8.0/lib/python python3 ./setup.py install --home=/opt/ohpc/pub/apps/websockify/0.8.0
+    args:
+      chdir: /tmp/websockify
+  - name: delete websockify git repo from /tmp
+    file:
+      path: /tmp/websockify
+      state: absent
+
+  - name: Copy websockify  module to {{ trix_root }}/ohpc/pub/modulefiles/websockify/0.8.0
+    copy:
+      src: websockify-0.8.0.module
+      dest: '{{ trix_root }}/ohpc/pub/modulefiles/websockify/0.8.0'
+  when: websockify.stat.exists == False

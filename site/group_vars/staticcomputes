@@ -1,0 +1,3 @@
+enable_vnc_to_nodes: true
+vnc_desktop: 'xfce'
+

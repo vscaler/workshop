@@ -1,0 +1,30 @@
+---
+# Install support script and configure bash environment
+
+- name: Install needed packages
+  yum:
+    name: '{{ cv_support_packages }}'
+    state: present
+  tags: install-only
+
+- name: Install request-remote-assistance to /usr/local/bin
+  copy:
+    src: 'request-remote-assistance'
+    dest: '/usr/local/bin'
+    owner: 'root'
+    group: 'root'
+    mode: '0750'
+
+- name: Render /root/.bash_profile
+  template:
+    src: bash_profile.j2
+    dest: /root/.bash_profile
+
+- name: Add {{trix_root}}/site file to the controllers
+  lineinfile:
+    path: '{{trix_root}}/site'
+    line: '{{ project_id }}'
+    state: present
+    create: yes
+  when: primary|default(True)
+

@@ -1,0 +1,16 @@
+---
+# tasks file for create default users
+
+- name: create default admin users
+  shell: "obol user list | grep {{item}} || (obol user add {{item}} -g admins -p {{ lookup('password','/etc{{trix_root}}/passwords/default-users/{{ item }}.txt chars=ascii_letters,digits,hexdigits') }} && su - {{item}} -c 'exit 0' && echo changed)"
+  register: result
+  changed_when: "'changed' in result.stdout"
+  when: default_admin_users is iterable and primary|bool
+  with_items: '{{ default_admin_users }}'
+
+- name: create default users
+  shell: "obol user list | grep {{item}} || (obol user add {{item}} -g admins -p {{ lookup('password','/etc{{trix_root}}/passwords/default-users/{{ item }}.txt chars=ascii_letters,digits,hexdigits') }} && su - {{item}} -c 'exit 0' && echo changed)"
+  register: result
+  changed_when: "'changed' in result.stdout"
+  when: default_normal_users is iterable and primary|bool
+  with_items: '{{ default_normal_users }}'

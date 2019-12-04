@@ -1,0 +1,20 @@
+---
+# this playbook overrides the default variables for the OpenHPC role so that we can rerun the role at the end afer all nodes are installed
+# this means that the system will come up faster as we do not need to wait for 100+ packages to install on the controller(s)
+# before the compute nodes can be provisioned
+
+- hosts: all
+
+  roles:
+    - role: trinity/init
+      tags: always
+
+    - role: trinity/openhpc
+      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
+      openhpc_install_standard: true
+      openhpc_install_gnu: false
+      openhpc_install_gnu7: false
+      openhpc_install_gnu8: true
+      openhpc_install_intel: false
+      when: enable_openhpc == true
+      tags: openhpc

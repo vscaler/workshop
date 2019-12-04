@@ -1,0 +1,11 @@
+---
+trix_root_use_ext_nfs: false
+trix_root_ext_nfs_hostname: ''
+trix_root_nfs_ext_path: ''
+trix_root_ext_nfs_opts: 'nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport'
+trix_root_use_weka: false
+trix_root_weka_mnt_cmd: ''
+trix_root_use_local_block: true
+trix_root_local_fs: xfs
+trix_root_local_fs_mkfs_opts: '-b size=4096 -s size=4096'
+shared_fs_device: ''

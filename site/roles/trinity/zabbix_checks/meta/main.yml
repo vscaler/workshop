@@ -1,0 +1,7 @@
+---
+dependencies:
+  - zabbix_agent
+  - role: repos
+    repos:
+      - repo: '{{ trinity_repo }}'
+

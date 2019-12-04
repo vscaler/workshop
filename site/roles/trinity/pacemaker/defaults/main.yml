@@ -1,0 +1,27 @@
+---
+# vars file for pacemaker
+
+pacemaker_packages:
+  - pacemaker
+  - pcs
+  - fence-agents-ipmilan
+
+pacemaker_properties:
+  no-quorum-policy: ignore
+pacemaker_resource_defaults:
+  - 'migration-threshold=1'
+
+fence_ipmilan_host_check: 'static-list'
+fence_ipmilan_method: 'cycle'
+fence_ipmilan_lanplus: 'true'
+fence_ipmilan_login: 'user'
+fence_ipmilan_passwd: 'password'
+
+trix_ctrl1_uuid:
+trix_ctrl2_uuid:
+fence_openstack_host_check: 'static-list'
+fence_openstack_login: 'user'
+fence_openstack_passwd: 'password'
+fence_openstack_auth_url: 'http://'
+fence_openstack_project_name:
+fence_openstack_project_domain_name:

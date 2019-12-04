@@ -1,0 +1,5 @@
+---
+# defaults for the init role
+
+default_gateway: '{{ trix_ctrl_ip }}'
+disable_cloud_init: false

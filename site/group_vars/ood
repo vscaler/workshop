@@ -1,0 +1,4 @@
+cluster_name: 'fnc-cluster'
+enable_vnc_to_nodes: true
+ood_portal_brand: 'vscaler'
+

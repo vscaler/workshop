@@ -1,0 +1,18 @@
+---
+# tasks file for resolvconf
+
+  # controllers have this configured in bind role 
+- name: Render /etc/resolv.conf
+  template:
+    src: "resolv.conf"
+    dest: "/etc/resolv.conf"
+    backup: yes
+  when: configure_resolveconf|bool and not on_controller|bool
+
+- name: Preserve resolv.conf from being overwritten
+  copy:
+    src: dhclient-enter-hooks
+    dest: /etc/dhcp/dhclient-enter-hooks
+    mode: 0755
+    backup: yes
+  when: configure_resolveconf|bool and not on_controller|bool

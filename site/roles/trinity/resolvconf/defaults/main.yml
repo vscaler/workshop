@@ -1,0 +1,7 @@
+---
+# vars file for resolvconf
+
+# if this is enabled then ansible will build the resolvconf on the compute nodes (normally set by luna)
+configure_resolveconf: false
+trix_ctrl_ip: 10.141.255.254
+resolv_search_domains: 'cluster ipmi'

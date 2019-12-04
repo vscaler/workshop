@@ -1,0 +1,8 @@
+BOOTPROTO=dhcp
+DEVICE={{ ctrl1_hb_nic if primary == true else ctrl1_hb_nic }}
+HWADDR={{ ctrl1_hb_mac if primary == true else ctrl2_hb_mac }}
+ONBOOT=yes
+TYPE=Ethernet
+USERCTL=no
+ZONE=trusted
+NM_CONTROLLED=no

@@ -1,0 +1,12 @@
+zone "{{ item }}" IN {
+    type master;
+    file "{{ item }}.zone";
+    allow-transfer {none; };
+};
+
+//zone " dns_reverse_ptr .in-addr.arpa" IN {
+//    type master;
+//    file " dns_reverse_ptr .in-addr.arpa.zone";
+//    allow-update { key "scheduler-update-key."; };
+//    allow-transfer {none; };
+//};

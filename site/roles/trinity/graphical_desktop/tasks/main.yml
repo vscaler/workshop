@@ -1,0 +1,15 @@
+---
+- name: Install MATE desktop
+  yum: 
+    enablerepo: epel 
+    name: ['@mate-desktop-environment', 'numpy', 'xorg-x11-xkb-utils', 'xkeyboard-config']
+    state: present
+  when: enable_vnc_to_nodes == true and vnc_desktop == 'mate' 
+
+- name: Install Xfce desktop
+  yum: 
+    enablerepo: epel 
+    name: ['@xfce-desktop', 'numpy', 'xorg-x11-xkb-utils', 'xkeyboard-config']
+    state: present
+  when: enable_vnc_to_nodes == true and vnc_desktop == 'xfce' 
+

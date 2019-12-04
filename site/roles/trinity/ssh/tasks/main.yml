@@ -1,0 +1,68 @@
+---
+# tasks file for ssh
+
+- name: Generate ssh keys on the primary controller
+  user:
+    name: root
+    generate_ssh_key: yes
+    ssh_key_bits: 4096
+    ssh_key_type: rsa
+  when: primary
+
+- name: Install ssh keys on the secondary controller
+  synchronize:
+    dest: '/root/.ssh/{{ item }}'
+    src: '/root/.ssh/{{ item }}'
+    archive: yes
+  when: ha and not primary
+  with_items:
+    - id_rsa
+    - id_rsa.pub
+
+- name: Set authorized key
+  authorized_key:
+    user: root
+    state: present
+    key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
+
+#- name: Update ssh and sshd configuration files
+#  copy:
+#    src: '{{ item.0 }}'
+#    dest: '/etc/ssh/{{ item.0 }}'
+#    mode: '{{ item.1 }}'
+#    owner: root
+#    group: root
+#  with_together:
+#    - [ 'sshd_config', 'ssh_config']
+#    - [ '0600', '0644' ]
+#  notify: restart sshd
+- name: Update ssh configuration file
+  copy:
+    src: 'ssh_config'
+    dest: '/etc/ssh/ssh_config'
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart sshd
+
+- name: create sshd configuration file from template
+  template:
+    src: 'sshd_config'
+    dest: '/etc/ssh/sshd_config'
+    mode: '600'
+    owner: root
+    group: root
+  notify: restart sshd
+
+- name: Add script to create a default ssh cluster key if none already exists
+  copy:
+    src: 'create_ssh_key.sh'
+    dest: '/etc/profile.d/create_ssh_key.sh'
+    owner: root
+    group: root
+
+- name: Start and enable sshd daemon
+  service:
+    name: sshd
+    state: started
+    enabled: yes

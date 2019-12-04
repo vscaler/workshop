@@ -1,0 +1,60 @@
+---
+- name: create a mountpoint for the shared file system
+  file:
+    path: '{{ aws.sharedfs_mountpoint }}'
+    owner: root
+    group: root
+    mode: '0755'
+    state: directory
+
+
+- name: mount the shared file system
+  mount:
+    src: '{{ aws.sharedfs_ip }}:/'
+    path: '{{ aws.sharedfs_mountpoint }}'
+    opts: 'nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport'
+    fstype: nfs4
+    state: mounted
+  when: use_aws_nfs
+
+
+#- name: rename default {{trix_root}} dir
+#  shell: 'mv {{ trix_root }} {{trix_root }}-bkp'
+#  args:
+#    creates: '{{ trix_root }}-bkp'
+
+######################################################################
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111111#
+# the following only works on first run, then the block dev is not   #
+# detected causing problems.  Changing openstack to read set         #
+# shared_blockdev=/dev/vdb or whatever it gets !TODO update AWS CFN! #
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111111#
+######################################################################
+
+#- name: locate the EBS shared device 
+#  shell: lsblk  -fnpl | grep -A1 xfs | grep -v xfs | awk '{ print $1 }'
+#  register: blockdev
+#  changed_when: false
+#  tags: install-only
+
+- name: format the shared block device
+  filesystem:
+    fstype: xfs
+    dev: '{{ shared_blockdev }}'
+
+- name: get the shared block device UUID
+  shell: blkid | grep '{{ shared_blockdev }}' | awk '{ print $2 }' | tr -d '"'
+  register: blockdev_uuid
+  changed_when: false
+
+- name: mount the shared block device on '{{ trix_root }}'
+  mount:
+    src: '{{ shared_blockdev }}'
+    path: '{{ trix_root }}'
+    fstype: xfs
+    state: mounted
+
+#- name: copy '{{ trix_root }}-bkp' to '{{ trix_root }}'
+#  shell: 'rsync -raW -AX {{ trix_root }}-bkp/* {{ trix_root }}/'
+#  args:
+#    creates: '{{ trix_root }}/local'

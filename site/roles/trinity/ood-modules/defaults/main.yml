@@ -1,0 +1,4 @@
+---
+# vars file for ood-modules
+
+enable_vnc_to_nodes: false

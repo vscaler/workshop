@@ -1,0 +1,4 @@
+---
+# handlers for mlnx_ofed
+- name: reboot node
+  reboot:

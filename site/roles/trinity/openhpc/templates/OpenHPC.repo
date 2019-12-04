@@ -1,0 +1,11 @@
+[OpenHPC]
+name=OpenHPC-{{ohpc_major_ver}}.{{ohpc_minor_ver}} - Base
+baseurl={{repomirror}}/OpenHPC:/{{ohpc_major_ver}}.{{ohpc_minor_ver}}/CentOS_7
+gpgcheck=1
+gpgkey={{repomirror}}//OpenHPC:/{{ohpc_major_ver}}.{{ohpc_minor_ver}}/CentOS_7/repodata/repomd.xml.key
+
+[OpenHPC-updates]
+name=OpenHPC-{{ohpc_major_ver}}.{{ohpc_minor_ver}} - Updates
+baseurl={{repomirror}}/OpenHPC:/{{ohpc_major_ver}}.{{ohpc_minor_ver}}/updates/CentOS_7
+gpgcheck=1
+gpgkey={{repomirror}}//OpenHPC:/{{ohpc_major_ver}}.{{ohpc_minor_ver}}/CentOS_7/repodata/repomd.xml.key
