@@ -565,4 +565,50 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook controller.yml
 ansible-playbook static_compute.yml 
 ```
 
-# to get singularity to work  (take2!)
+## Check the status of SLURM 
+Make sure SLURM is online and working ok 
+
+```bash
+sinfo 
+squeue
+```
+# Execute jobs with Singularity
+
+Step #3 - As part of this stage of the workshop we will run some Singularity application containers 
+
+For more information on Singularity, please visit: https://sylabs.io
+
+## Run an app from Singularity hub
+```bash
+module load singularity
+singularity pull shub://vsoch/hello-world
+singularity run ./hello-world_latest.sif 
+```
+
+## Run an app from Dockerhub
+
+Now lets do the same thing but import from dockerhub
+```bash
+singularity pull docker://godlovedc/lolcow
+singularity run ./lolcow_latest.sif
+```
+
+## Explore the container
+
+Drop in to the shell and show the OS version 
+```bash
+singularity shell ./lolcow_latest.sif 
+cat /etc/os-release
+```
+
+## Install an updated Python
+```bash
+singularity pull docker://python:3.5.2
+singularity exec ./python_3.5.2.sif python -V 
+```
+
+## Install R
+```bash
+singularity pull docker://r-base
+singularity pull docker://r-base:3.6.1
+```
