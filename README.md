@@ -6,6 +6,59 @@ In this workshop we will shall attempt the following
 2. Create a 2 node virtual cluster on top of our OpenStack environment 
 3. Run some workload in a Singularity Container 
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [vScaler HPC on OpenStack Workshop](#vscaler-hpc-on-openstack-workshop)
+  - [Disable selinux on both nodes](#disable-selinux-on-both-nodes)
+  - [Install docker and some packages](#install-docker-and-some-packages)
+  - [Working with Screen](#working-with-screen)
+- [Setup the deploy container](#setup-the-deploy-container)
+  - [Create the base configuration files.](#create-the-base-configuration-files)
+  - [Create the globals.yml configuration file](#create-the-globalsyml-configuration-file)
+  - [Setup the ansible inventory file.](#setup-the-ansible-inventory-file)
+  - [Restart docker container with configiration files mounted](#restart-docker-container-with-configiration-files-mounted)
+  - [Generate passwords for all the OpenStack services](#generate-passwords-for-all-the-openstack-services)
+  - [Ping checks](#ping-checks)
+  - [Bootstrap target AIO node](#bootstrap-target-aio-node)
+  - [Run the deploy prechecks](#run-the-deploy-prechecks)
+  - [Pull the images down](#pull-the-images-down)
+  - [Ready to deploy!](#ready-to-deploy)
+  - [Create adminrc shell file](#create-adminrc-shell-file)
+  - [Check the OpenStack environmnet](#check-the-openstack-environmnet)
+  - [Setup the initial OpenStack environment](#setup-the-initial-openstack-environment)
+  - [Run the init-runonce script](#run-the-init-runonce-script)
+  - [Create first VM](#create-first-vm)
+  - [Failure to create VM](#failure-to-create-vm)
+  - [Update the OpenStack configuration](#update-the-openstack-configuration)
+  - [Verify the reconfiguration](#verify-the-reconfiguration)
+  - [Create VM - Take#2](#create-vm---take2)
+  - [Access the VM](#access-the-vm)
+  - [Import Centos7 images](#import-centos7-images)
+  - [Create our cluster controller and compute node](#create-our-cluster-controller-and-compute-node)
+- [Time to deploy the HPC Cluster](#time-to-deploy-the-hpc-cluster)
+  - [Setup the Centos VM nodes as we need](#setup-the-centos-vm-nodes-as-we-need)
+  - [Setup to use local repo](#setup-to-use-local-repo)
+  - [Generate /etc/hosts](#generate-etchosts)
+  - [Setup passwordless access between the nodes](#setup-passwordless-access-between-the-nodes)
+  - [Permit root access to the cloud images](#permit-root-access-to-the-cloud-images)
+  - [Install some prereqs and clone repo](#install-some-prereqs-and-clone-repo)
+  - [Setup some more prereqs](#setup-some-more-prereqs)
+  - [Modify the ansible setup](#modify-the-ansible-setup)
+  - [Ansible configure the controller / headnode](#ansible-configure-the-controller--headnode)
+  - [Ansible configure the compute node](#ansible-configure-the-compute-node)
+  - [Check the status of SLURM](#check-the-status-of-slurm)
+- [Execute jobs with Singularity](#execute-jobs-with-singularity)
+  - [Run an app from Singularity hub](#run-an-app-from-singularity-hub)
+  - [Run an app from Dockerhub](#run-an-app-from-dockerhub)
+  - [Explore the container](#explore-the-container)
+  - [Install an updated Python](#install-an-updated-python)
+  - [Install R](#install-r)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 Ok, so to start with lets make sure we can all access the VMs provided for the lab environment and get the baseline configuration in place to allow us progress. Details for access will be provided by the instrutor. You should have access to 2 VMs. One VM ```vscaler-kolla-deploy-XX``` and ```vscaler-openstack-aio-YY```. These nodes are refered to as ```deploy``` and ```aio``` from here on in. (aio =  AllInOne)
 
 > Note: All commands should be run by root unless otherwise stated. You'll need to login as centos and then ```sudo su -```
@@ -36,7 +89,7 @@ screen -S vscaler
 screen -r vscaler
 ```
 
-# Setup the deploy container
+## Setup the deploy container
 Lets pull our deployment container and get it tagged and ready for action.
 ```bash
 # on deploy node
