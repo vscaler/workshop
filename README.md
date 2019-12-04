@@ -66,7 +66,7 @@ The file ```~/kolla/globals.yml' holds the values for our clouds base configurat
 > Note: We use an IP address in here from the ```aio``` node. SSH to that system and capture the ```eth0``` ip address using the command ```ip addrr```
 
 ```bash
-[root@test-openstack kolla]# egrep -v '(^#|^$)' globals.yml
+[root@vscaler-kolla-deploy ~/kolla]# egrep -v '(^#|^$)' globals.yml
 ---
 openstack_release: "stein"
 ---
@@ -88,7 +88,7 @@ enable_haproxy: "no"
 We need to update the hostname and change the ansible_connection to ssh (from local) 
 
 Edit the inventory file ```~/kolla/all-in-one```
-```ansible
+```bash
 [control]
 openstack-aio       ansible_connection=ssh
 
@@ -108,42 +108,93 @@ openstack-aio       ansible_connection=ssh
 openstack-aio       ansible_connection=ssh
 ```
 
-# mount the kolla config dirs 
+## Restart docker container with configiration files mounted 
 
-
+Remove the existing deploy container and restart it passing the configuration files through to the container 
+```bash
 docker rm -f kolla-deploy 
-# docker run --name kolla-deploy --hostname kolla-deploy -v /root/kolla/:/etc/kolla/ -d -it kolla-deploy bash 
-# docker run --name kolla-deploy --hostname kolla-deploy --net=host -v /root/kolla/:/etc/kolla/ -d -it kolla-deploy bash 
-# need networking to ssh 
 docker run --name kolla-deploy --hostname kolla-deploy --net=host -v /root/kolla/:/etc/kolla/ -v /root/.ssh:/root/.ssh -d -it kolla-deploy bash 
+```
 
-# FIX: Python-requests needs removing / on openstack-aio node
-rpm -e --nodeps  python-requests (on openstack deploy not kolla-deploy)
+> FIX: Python-requests needs removing on ```openstack-aio``` node
+```bash
+# On the aio node 
+rpm -e --nodeps  python-requests
+```
 
+## Generate passwords for all the OpenStack services 
+Each of the services will have their own databases/tables in the backend database. We can use a script to generate passwords for all of these services. 
+
+```bash
+# Check the default settings - no passwords populated 
 cat kolla/passwords.yml 
 docker exec -it kolla-deploy generate_passwords.py
+# now we should see lots of passwords generated 
 cat kolla/passwords.yml 
+```
 
+## Ping checks
+
+Let make sure we can ping the target host
+```bash
 docker exec -it kolla-deploy ansible -i /etc/kolla/all-in-one all -m ping 
+```
 
+## Bootstrap target AIO node
+
+The bootstrap stage installs all the base packages required to take the centos minimal install to a system ready to have OpenStack deployed on it. This step may take up to 10 minutes. 
+
+```bash
 docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one  bootstrap-servers 
+```
 
+## Run the deploy prechecks
+
+There is a final stage before we do the deploy which will do some final verifcations on the system to ensure its ready and setup correctly before we deploy. 
+
+```bash
 docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one prechecks
+```
+## Pull the images down
+We use a number of containers during the deployment, each service has its own container and we pull these down before the deployment. Depending on the size of the class this can take some time as well. Each node will upll multiple GBs of containers as part of this step.
 
-ssh openstack-aio docker images
-docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one pull
-ssh openstack-aio docker images
+Before we pull the container images lets just take a quick look at whats there and track the pull progress. 
 
-ssh openstack-aio docker ps 
-docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one deploy
-ssh openstack-aio docker ps
+> Note: In the next step we jump from the ```deploy``` node to the ```aio``` node and back again.
 
+```bash
+# on the openstack-aio node
+[aio]$ docker images
+# back to the deploy node
+[deploy]$ docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one pull
+# check the images in another screen terminal to see the images downloading
+[aio]$ docker images
+```
+## Ready to deploy!
+
+At this stage we are now ready to start the deploy. This step can take some time, up to an hour, so its an ideal break time.. COFFEE!
+```bash
+# check the docker processes that are running on the aio world
+[aio]$ docker ps 
+[deploy]$ docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one deploy
+[aio] watch -n 10 docker ps
+```
+Hopefully at this stage the deployment has gone through successfully. You'll be presented with a summary of the deploy and timings in ansible from the deployment. Keep at eye on the error count. It should ready ```errros=0```
+
+## Create adminrc shell file
+
+To use the openstack CLI utility we need a source file with the user / admin configuraiton parameters. 
+```bash
+# Run this on the deploy node
 # this creates the admin-openrc.sh file 
-docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one post-deploy 
-
+[aio]$ docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one post-deploy 
 # verify the file
 cat ~/kolla/admin-openrc.sh
-
+```
+## Check the OpenStack environmnet
+Let use the openstack CLI utility to explore the current setup of our OpenStack environment.
+```bash
+# run on the deploy node
 # lets drop to bash in the container and try a few openstack commands 
 docker exec -it kolla-deploy bash
 source /etc/kolla/admin-openrc.sh
@@ -152,25 +203,38 @@ openstack server list
 openstack image list 
 openstack flavor list 
 openstack network list 
+# so not much there really!
+```
 
-# so not much there really! lets populate that and spin up a cirros image to test openstack 
+## Setup the initial OpenStack environment 
 
-# lets edit 
-/kolla/kolla-ansible/tools/init-runonce
+We have an ```init-runonce``` script which sets up the environment. Take a look through this file and examine it. Its a bash script and it runs a lot of ```openstack``` commands 
 
-so lets copy it out of the container first to edit it
+> Note: The EXT_NET_RANGE needs to be partitioned across all users in the class. MAke sure you check the etherpad for ranges to use for each VM. 
+
+```bash
+# so lets copy it out of the container first to edit it
 docker cp kolla-deploy:/kolla/kolla-ansible/tools/init-runonce ~/kolla/
-# edit the network public settings - have a little look through 
+vi ~/kolla/init-runonce
 
+# edit the network public settings - have a little look through 
 EXT_NET_CIDR='192.168.10/24'
 EXT_NET_RANGE='start=192.168.10.200,end=192.168.10.210'
 EXT_NET_GATEWAY='192.168.10.1'
+```
+## Run the init-runonce script 
 
+```bash
+# on the deploy node
 docker exec -it kolla-deploy bash
 source /etc/kolla/admin-openrc.sh 
 /etc/kolla/init-runonce 
+```
 
+## Create first VM
 # should complete without errors and present you with a command to spin up your first VM
+```bash
+# execure from inside the deploy container - continues from last step. 
 openstack server create \
     --image cirros \
     --flavor m1.tiny \
@@ -178,43 +242,84 @@ openstack server create \
     --network demo-net \
     demo1
 
-# Whooops - fail!!! So where did we go wrong? lets dig into the logs a little
+# To check the status of the server 
+openstack server list
+openstack server show demo1
+```
 
-# ssh on to the openstack node (not the kolla deploy node) 
+## Failure to create VM
 
+Whooops - fail!!! So where did we go wrong? Lets dig into the logs a little...
+
+```bash
+# ssh on to the openstack aio node) 
 cd /var/lib/docker/volumes/kolla_logs/_data/nova/
 grep -i error *
+```
 
-# So we couldnt find a hypervisor with KVM capability... Ah we're in the VM, we need to use qemu virtualisation... 
+So we couldnt find a hypervisor with KVM capability... Ah we're in the VM, we need to use qemu virtualisation... 
 
-# this command will confirm there is no hardware accelerated virtualisation available - so we need to implement software virtualisation with qemu
+## Update the OpenStack configuration
+
+Check the VM for hardware accelerated virtualisation support. this command will confirm there is no hardware accelerated virtualisation available - so we need to implement software virtualisation with qemu
+
+```bash
 egrep '(vmx|svm)' /proc/cpuinfo
+```
 
-# then check /etc/kolla/nova-compute/nova.conf
-# section [libvirt] 
-# virt_type = kvm
+Lets take a look at the current node (compute) configuration file. 
+
+```bash
+# on the aio node
+vi /etc/kolla/nova-compute/nova.conf
+# search for section [libvirt] 
+virt_type = kvm
 # this needs to change to 
-# virt_type = qemu
+virt_type = qemu
 # time to reconfigure openstack...
-# back to the kolla-deploy node - outside of kolla-deploy container
 
+
+## Reconfigure 
+
+Jump back to the deploy node - outside of kolla-deploy container
+
+```bash
+# deploy node
 mkdir ~/kolla/config 
 # this will be /etc/kolla/config in our container remember
 vi ~/kolla/config/nova.conf
 [libvirt]
 virt_type = qemu
+```
 
-# with the nova tag instead of a full reconfigure
+We can run a reconfigure which distributes the configuration files across the system and restarts necessary services.
+
+> Note: Add a ```-t nova``` tag to prevent the full cloud being reconfigured which can save a good chunk of time
+
+```bash
 docker exec -it kolla-deploy kolla-ansible -i  /etc/kolla/all-in-one reconfigure -t nova 
+```
 
-# lets jump back over to the openstack node and take a look at the nova.conf in nova-compute
-# ah so nova.conf is updated with virt_type
+## Verify the reconfiguration
+
+Lets jump back over to the ```openstack aio``` node and take a look at the nova.conf in nova-compute
+
+```bash
+# on aio node 
+grep virt_type  /etc/kolla/nova-compute/nova.conf 
+# ah so nova.conf is updated with virt_type. Let confirm this in the nova_compute container as well
+docker exec -it nova_compute grep virt_type /etc/nova/nova.conf 
 
 # and you'll also notice the nova container was restarted as the nova configuration file was updated. 
 ssh openstack-aio docker ps 
 ssh openstack-aio docker ps '| grep nova_compute'
+```
 
-# ok lets try and spin up a VM again
+## Create VM - Take#2
+
+Ok lets try and spin up a VM again
+
+```bash
 docker exec -it kolla-deploy bash
 source /etc/kolla/admin-openrc.sh
 openstack server list
@@ -225,51 +330,87 @@ openstack server create \
     --key-name mykey \
     --network demo-net \
     demo1
+```
 
-# after a short while we should see 
+
+After a short while we should see an ACTIVE VM
+```bash
 root@kolla-deploy:/kolla# openstack server list
 +--------------------------------------+-------+--------+---------------------+--------+---------+
 | ID                                   | Name  | Status | Networks            | Image  | Flavor  |
 +--------------------------------------+-------+--------+---------------------+--------+---------+
 | 28b0ab7b-114c-4090-9a2d-6f6692b524ea | demo1 | ACTIVE | demo-net=10.0.0.211 | cirros | m1.tiny |
 +--------------------------------------+-------+--------+---------------------+--------+---------+
+```
 
-# check it out in the portal as well - hit the floating IP for your server and login with the credentials in /etc/kolla/admin-openrc.sh
+> Note: You should be able to check all of this in the web portal as well. Hit the floating IP for your aio server and login with the credentials in /etc/kolla/admin-openrc.sh
 
+## Access the VM
+
+Here we are going to take advantage of the ```ip netns``` IP network namespaces to drop into the cloud demo-net where the VM is hosted. 
+
+> Note: Here we use a qrouter UUID which will be unique to your environment. Please take a note of it and be careful with the commands. 
+
+> Note: Likewise with the IP address. Make sure that is copied from the ```openstack server list``` output in the prior step.
+
+```bash
 # on the openstack-aio node
 ip netns
 ip netns exec qrouter-XXXXXX ping 10.0.0.211
 ip netns exec qrouter-XXXXXX ssh cirros@10.0.0.211 #Pass gocubsgo
+# ping the outside world $ ping 8.8.8.8 # Note: Port security disabled required - if issues speak to instructor! 
+```
 
-ping the outside world (Note: Port security disabled required) 
+## Import Centos7 images 
 
+To run our HPC environment, we will need to build on Centos7 minimal so lets get and import that into glance (image service for OpenStack)
+
+```bash
 # lets add centos image
-# back to kolla deploy 
+# back to deploy node
 curl -O http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2.xz
 unxz CentOS-7-x86_64-GenericCloud.qcow2.xz
 mv CentOS-7-x86_64-GenericCloud.qcow2 ~/kolla/
+```
 
-# copy across ssh keys to the openstack-aio node (from the deploy node) 
+Copy across ssh keys to the openstack-aio node (from the deploy node) 
+```bash
 scp ~/.ssh/id_rsa* vscaler-openstack-aio:.ssh/
+```
 
-# before we go and create the 
+Before we go and create the image lets import into glance 
+```bash
 docker exec -it kolla-deploy bash
 source /etc/kolla/admin-openrc.sh
 cd /etc/kolla
 openstack image create --container-format bare --disk-format qcow2 --file CentOS-7-x86_64-GenericCloud.qcow2 CentOS-7
+```
 
-# ok lets confirm our flavors and images 
+Lets confirm our flavors and images 
+```bash
 openstack flavor list
 openstack image list
+```
 
-# and lets create 2 centos images - one as the headnode - one as compute 
-# dont be a hero - keep the naming convention as this is built into the ansible we will be using later on!
-# headnode = vcontroller
-# computenode = node0001
+
+## Create our cluster controller and compute node
+
+Create 2 centos images - one as the headnode (vcontroller) - one as compute (node0001) 
+
+> Note: Dont be a hero - keep the naming convention as this is built into the ansible we will be using later on!
+>  headnode = vcontroller
+>  computenode = node0001
+
+```bash
+# drop to deploy container
 openstack server create --image CentOS-7 --flavor m1.medium --key-name mykey --network demo-net vcontroller
 openstack server create --image CentOS-7 --flavor m1.medium --key-name mykey --network demo-net node0001   
+```
 
-# lets go and access the vcontrolelr node
+Check the server status
+
+```bash
+# Lets go and access the vcontrolelr node
 root@kolla-deploy:/kolla# openstack server list
 +--------------------------------------+-------------+--------+---------------------+----------+-----------+
 | ID                                   | Name        | Status | Networks            | Image    | Flavor    |
@@ -277,10 +418,9 @@ root@kolla-deploy:/kolla# openstack server list
 | af0448c9-7835-415f-be32-02f220d0fd28 | node0001    | ACTIVE | demo-net=10.0.0.232 | CentOS-7 | m1.medium |
 | 7f618933-c2c9-4848-a3b7-b753e4f336e9 | vcontroller | ACTIVE | demo-net=10.0.0.149 | CentOS-7 | m1.medium |
 +--------------------------------------+-------------+--------+---------------------+----------+-----------+
-root@kolla-deploy:/kolla# source /etc/kolla/admin-openrc.sh^C
 root@kolla-deploy:/kolla# exit
 exit
-[root@vscaler-kolla-deploy ~]# ssh vo 
+[root@vscaler-kolla-deploy ~]# ssh aioo 
 Last login: Wed Dec  4 09:17:12 2019 from 192.168.17.246
 [root@vscaler-openstack-aio ~]# ip netns exec qrouter-83e3dde7-5b9f-4f4d-9d47-111cc2daf219 ssh centos@10.0.0.149
 The authenticity of host '10.0.0.149 (10.0.0.149)' can't be established.
@@ -289,8 +429,10 @@ ECDSA key fingerprint is MD5:b2:c4:79:7d:03:49:6d:ea:9a:06:1f:7e:4c:a5:95:64.
 Are you sure you want to continue connecting (yes/no)? yes
 Warning: Permanently added '10.0.0.149' (ECDSA) to the list of known hosts.
 [centos@vcontroller ~]$ 
+```
 
-##### 
+
+# Time to deploy OpenHPC
 opehpc 
 
 centos minimal 
