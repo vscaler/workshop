@@ -1,15 +1,36 @@
 # vScaler HPC on OpenStack Workshop
-Workshop for Installing vScaler
 
-[david@Davids-MacBook-Pro-4 ~]$ cat notes/openstack-kolla.notes 
+In this workshop we will shall attempt the following
+
+1. Install an OpenStack all-in-one environment 
+2. Create a 2 node virtual cluster on top of our OpenStack environment 
+3. Run some workload in a Singularity Container 
+
+Ok, so to start with lets make sure we can all access the VMs provided for the lab environment and get the baseline configuration in place to allow us progress. Details for access will be provided by the instrutor. You should have access to 2 VMs. One vscaler-kolla-deploy-XX and one vscaler-openstack-aio-YY.
+
+## Lets disable selinux on both nodes
+```bash
 setenforce 0
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux 
+```
+
+
+## Install docker and some packages
+```bash
 yum -y install docker vim screen
 systemctl start docker
+````
 
+## Working with Screen
+
+wifi drops are painfully frequent - dont let it ruin your good work. Get working in screen (or tmux) so you can reattach in the event of any connectivity issues. 
+```bash
+# Screen basics
 screen -S vscaler
 (ctrl + a, ctrl + d)
 screen -r vscaler
+```
+
 
 docker pull registry.vscaler.com:5000/kolla/kolla-deploy:stein
 docker tag registry.vscaler.com:5000/kolla/kolla-deploy:stein kolla-deploy
