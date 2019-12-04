@@ -2,7 +2,7 @@
 # vars file for openhpc
 # note, it's best not to edit this by hand too much use the build-default-vars.sh script in the role root directory to generate this based on filtering yum list
 # default install is for a minimual OpenHPC install, override the following to change
-openhpc_install_standard: false
+openhpc_install_standard: true
 openhpc_install_gnu: false
 openhpc_install_gnu7: false
 openhpc_install_gnu8: false
@@ -14,62 +14,62 @@ repomirror: 'http://build.openhpc.community'
 
 openhpc_standard_packages:
   - EasyBuild-ohpc
-  - R_base-ohpc
-  - autoconf-ohpc
-  - automake-ohpc
-  - charliecloud-ohpc
-  - clustershell-ohpc
-  - cmake-ohpc
-  - conman-ohpc
-  - docs-ohpc
-  - examples-ohpc
-  - genders-compat-ohpc
-  - genders-ohpc
-  - hwloc-ohpc
-  - libmxml1
-  - libtool-ohpc
-  - llvm4-compilers-ohpc
-  - llvm5-compilers-ohpc
-  - lmod-ohpc
-  - losf-ohpc
-  - lua-bit-ohpc
-  - lua-filesystem-ohpc
-  - lua-posix-ohpc
-  - meta-packages
-  - mrsh-ohpc
-  - mrsh-rsh-compat-ohpc
-  - mrsh-server-ohpc
-  - msr-safe-ohpc
-  - nhc-ohpc
-  - ohpc-autotools
-  - ohpc-base
-  - ohpc-base-compute
-  - ohpc-buildroot
-  - ohpc-filesystem
-  - papi-ohpc
-  - paraver-ohpc
-  - pdsh-mod-genders-ohpc
-  - pdsh-ohpc
-  - pmix-ohpc
-  - prun-ohpc
-  - python34-Cython-ohpc
-  - shine-ohpc
+#  - R_base-ohpc
+#  - autoconf-ohpc
+#  - automake-ohpc
+#  - charliecloud-ohpc
+#  - clustershell-ohpc
+#  - cmake-ohpc
+#  - conman-ohpc
+#  - docs-ohpc
+#  - examples-ohpc
+#  - genders-compat-ohpc
+#  - genders-ohpc
+#  - hwloc-ohpc
+#  - libmxml1
+#  - libtool-ohpc
+#  - llvm4-compilers-ohpc
+#  - llvm5-compilers-ohpc
+#  - lmod-ohpc
+#  - losf-ohpc
+#  - lua-bit-ohpc
+#  - lua-filesystem-ohpc
+#  - lua-posix-ohpc
+#  - meta-packages
+#  - mrsh-ohpc
+#  - mrsh-rsh-compat-ohpc
+#  - mrsh-server-ohpc
+#  - msr-safe-ohpc
+#  - nhc-ohpc
+#  - ohpc-autotools
+#  - ohpc-base
+#  - ohpc-base-compute
+#  - ohpc-buildroot
+#  - ohpc-filesystem
+#  - papi-ohpc
+#  - paraver-ohpc
+#  - pdsh-mod-genders-ohpc
+#  - pdsh-ohpc
+#  - pmix-ohpc
+#  - prun-ohpc
+#  - python34-Cython-ohpc
+#  - shine-ohpc
   - singularity-ohpc
-  - spack-ohpc
-  - test-suite-ohpc
-  - texlive-draftwatermark
-  - texlive-draftwatermark-doc
-  - texlive-everypage
-  - texlive-everypage-doc
-  - texlive-tcolorbox
-  - texlive-tcolorbox-doc
-  - texlive-trimspaces
-  - texlive-trimspaces-doc
-  - valgrind-ohpc
-  - vim-clustershell-ohpc
-  - ohpc-release
-  - texlive-environ
-  - texlive-environ-doc
+#  - spack-ohpc
+#  - test-suite-ohpc
+#  - texlive-draftwatermark
+#  - texlive-draftwatermark-doc
+#  - texlive-everypage
+#  - texlive-everypage-doc
+#  - texlive-tcolorbox
+#  - texlive-tcolorbox-doc
+#  - texlive-trimspaces
+#  - texlive-trimspaces-doc
+#  - valgrind-ohpc
+#  - vim-clustershell-ohpc
+#  - ohpc-release
+#  - texlive-environ
+#  - texlive-environ-doc
 openhpc_intel_packages:
   - adios-intel-impi-ohpc
   - adios-intel-mpich-ohpc
