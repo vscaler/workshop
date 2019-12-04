@@ -432,26 +432,53 @@ Warning: Permanently added '10.0.0.149' (ECDSA) to the list of known hosts.
 ```
 
 
-# Time to deploy OpenHPC
-opehpc 
+# Time to deploy the HPC Cluster
+Step 2: In this phase of the workshop we install a 2 node cluster. There's a headnode ```vcontroller``` and a compute node ```node0001``` which are based on centos minimal images. We will be using ansible to configure the nodes. 
 
-centos minimal 
+For more information about the underlying HPC system, please check out the openhpc website: http://www.openhpc.community
 
+## Setup the Centos VM nodes as we need 
+```bash
+# Disable SELinux
 setenforce 0 
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux 
+```
 
-setup hosts (vcontroller / node0001 ideally) 
+## Setup to use local repo
+Hopefully youve not snuck ahead and tried to install packages already. If you have please clean out the yum cache as we use our own local repos as below. 
+
+```bash
+echo "95.154.198.10   repomirror" >> /etc/hosts
+cp /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.orig
+curl http://repomirror/CentOS/CentOS-Base.repo >/etc/yum.repos.d/CentOS-Base.repo
+curl http://repomirror/epel/epel.repo > /etc/yum.repos.d/epel.repo
+```
+
+## Generate /etc/hosts 
+
+Setup the /etc/hosts file on both nodes (vcontroller / node0001)
+
+> Note: Pay close attention to IP addresses below, dont blindly copy
+
+```bash 
 192.168.17.40   vcontroller.cluster vcontroller vc
 192.168.17.184  node0001.cluster node0001 n0001
+```
 
-setup ssh keys! inc localhost and node0001
-ssh to each node to add to known_hosts
+## Setup passwordless access between the nodes
+
+```bash
+# ssh to each node to add to known_hosts
 [root@vscaler-openstack-aio ~]# ip netns exec qrouter-83e3dde7-5b9f-4f4d-9d47-111cc2daf219 scp ~/.ssh/id_rsa* centos@10.0.0.149:
 id_rsa                                                                                                                                                      100% 1679     7.2KB/s   00:00    
 id_rsa.pub                                                                                                                                                  100%  417    72.2KB/s   00:00    
 [root@vcontroller ~]# 
+```
 
-# by default the centos cloud images dont allow root access so lets fix that 
+## Permit root access to the cloud images 
+
+By default the centos cloud images dont allow root access so lets fix that 
+```bash
 [root@vcontroller ~]# ssh node0001
 The authenticity of host 'node0001 (10.0.0.232)' can't be established.
 ECDSA key fingerprint is SHA256:vyq5JFF5HkicP563m/ErUvNCjJHfqbNffxG0p+Q/b68.
@@ -477,56 +504,65 @@ Connection to node0001 closed.
 [root@vcontroller ~]# ssh node0001
 Last login: Wed Dec  4 09:31:16 2019
 [root@node0001 ~]# 
+```
 
-# repeat to allow the system access itself vcontroller -> vcontroller
+Repeat this proceedure to allow the system access itself, i.e:  vcontroller -> vcontroller
+
+```bash
 [root@vcontroller ~]# vi ~/.ssh/authorized_keys 
 [root@vcontroller ~]# ssh vcontroller
 Last login: Wed Dec  4 09:35:18 2019 from vcontroller
 [root@vcontroller ~]# 
+```
 
-# ok lets sync the ansible configuration files
+## Install some prereqs and clone repo
 
-curl http://bostonhpc.co.uk:8081/dp/site.tgz > site2.tgz
+> Note: dont forget the ```.``` in the git clone command 
 
-tar zxvf into /opt/vScaler
+```bash
+# on vcontroller
+yum -y install ansible git screen vim 
+mkdir -p /opt/vScaler
+git clone https://github.com/vscaler/workshop .
+```
 
-echo "95.154.198.10   repomirror" >> /etc/hosts
 
-cp /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.orig
-curl http://repomirror/CentOS/CentOS-Base.repo >/etc/yum.repos.d/CentOS-Base.repo
-curl http://repomirror/epel/epel.repo > /etc/yum.repos.d/epel.repo
-
-yum -y install ansible git 
-
+## Setup some more prereqs
+```bash
 ansible-galaxy install OndrejHome.pcs-modules-2
 ansible-galaxy install ome.network
+```
 
-vi /opt/vScaler/site/hosts (insert correct name if needed) comment out portal 
+## Modify the ansible setup
 
+First of all we setup the hosts file / inventory file. 
+```bash
 cd /opt/vScaler/site
+vi hosts # (insert correct name if needed) comment out portal 
 
-edit controller.yml (ssl-cert area!) 
-
-edit group_vars/all: 
-trix_ctrl1_ip: 192.168.17.40
+# edit group_vars/all: 
+trix_ctrl1_ip: 10.0.0.149  # <--- Make sure this is the correct IP address, needs to be the vcontroller IP
 trix_ctrl1_bmcip: 10.148.255.254
 trix_ctrl1_heartbeat_ip: 10.146.255.254
 trix_ctrl1_hostname: vcontroller
 
 trix_cluster_net: 10.0.0.0
 trix_cluster_netprefix: 24
-# serach antonys cluster
+```
 
-  static_compute_host_name_base: computenode
+> Note: Be careful not to ```ctrl+c``` out of the ansible playbook. You can upset things if only partially completed. Let if fail or complete to be safe. 
 
-# mariadb fix 
-
-vi roles/trinity/mariadb/tasks/main.yml 
-76 #      check_implicit_admin: yes
-uncomment
-
+## Ansible configure the controller / headnode
+```bash
+# from the /opt/vScaler/site directory
+ansible-playbook controller.yml
+# or if you get prompted by SSH about host key checks
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook controller.yml
+```
 
+## Ansible configure the compute node 
+```bash
 ansible-playbook static_compute.yml 
+```
 
 # to get singularity to work  (take2!)

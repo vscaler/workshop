@@ -80,8 +80,8 @@
       tags: mlnx-ofed
       when: use_mellanox_ofed|bool
       
-    - role: trinity/cv_support
-      tags: cv_support
+#    - role: trinity/cv_support
+#      tags: cv_support
 
     - role: trinity/packages
       tags: packages
