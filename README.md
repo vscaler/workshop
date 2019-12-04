@@ -232,7 +232,7 @@ source /etc/kolla/admin-openrc.sh
 ```
 
 ## Create first VM
-# should complete without errors and present you with a command to spin up your first VM
+The init-runonce script should complete without errors and present you with a command to spin up your first VM
 ```bash
 # execure from inside the deploy container - continues from last step. 
 openstack server create \
